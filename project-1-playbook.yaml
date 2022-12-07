@@ -1,10 +1,48 @@
 ---
-- hosts: webserver
-vars:
-- warName: java-example-0.0.1-SNAPSHOT.war
-- tomcat_version: 8.5.53
-- warRemotePath: /opt/apache-tomcat-{{ tomcat_version }}/webapps
-tasks:
-- name: Copy WAR to Remote server
-copy: src=target/{{ warName }} dest={{ warRemotePath }}/{{
-warName }} owner=tomcat group=tomcat
+- name: "generate war file"
+  hosts: local
+  become: true
+  vars:
+          gitdir: "/tmp/addressbook-project-1"
+  tasks:
+          - name: install JDK 11
+            apt:
+                    name: openjdk-11-jdk
+                    state: present
+          - name: "install maven"
+            apt:
+                    name: maven
+          - name: "clone the addressbook project"
+            git:
+                    repo: 'https://github.com/upshiftnow/addressbook'
+                    dest: "{{ gitdir }}"
+                    version: "master"
+          - name: "compile the addressbook project"
+            command:
+                    chdir: "{{ gitdir }}"
+                    cmd: "mvn package"
+- name: "setup webserver and deploy WAR"
+  hosts: webserver
+  become: true
+  vars:
+          gitdir: "/tmp/addressbook-project-1"
+  tasks:
+          - name: "install tomcat9"
+            apt:
+                    name: tomcat9
+            notify: "enable tomcat service"
+          - name: "deploy WAR file"
+            copy:
+                    src: "{{ gitdir }}/target/addressbook-2.0.war"
+                    dest: "/var/lib/tomcat9/webapps/addressbook.war"
+            notify: "restart tomcat service post deployment"
+  handlers:
+          - name: "enable tomcat service"
+            service:
+                    name: tomcat9
+                    state: started
+                    enabled: yes
+          - name: "restart tomcat service post deployment"
+            service:
+                    name: tomcat9
+                    state: restarted
