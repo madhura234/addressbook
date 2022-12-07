@@ -1,15 +1,19 @@
 - name: "generate war file"
-  hosts: webserver
+  hosts: local
   become: true
   vars:
-          gitdir: "/tmp/addressbook"
+          gitdir: "/tmp/addressbook-project-1"
   tasks:
+          - name: install JDK 11
+            apt:
+                    name: openjdk-11-jdk
+                    state: present
           - name: "install maven"
             apt:
                     name: maven
           - name: "clone the addressbook project"
             git:
-                    repo: 'https://github.com/madhura234/addressbook'
+                    repo: 'https://github.com/upshiftnow/addressbook'
                     dest: "{{ gitdir }}"
                     version: "master"
           - name: "compile the addressbook project"
@@ -17,7 +21,7 @@
                     chdir: "{{ gitdir }}"
                     cmd: "mvn package"
 - name: "setup webserver and deploy WAR"
-  hosts: webserver 
+  hosts: webserver
   become: true
   vars:
           gitdir: "/tmp/addressbook-project-1"
@@ -37,3 +41,8 @@
                     name: tomcat9
                     state: started
                     enabled: yes
+          - name: "restart tomcat service post deployment"
+            service:
+                    name: tomcat9
+                    state: restarted
+"project-1-playbook.yaml" 48L, 1552C                                                                                                                                                                       1,19          Top
